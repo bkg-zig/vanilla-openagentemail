@@ -8,7 +8,10 @@ process.env.SMTP_USER = 'agent@test.example';
 process.env.SMTP_PASS = 'smtp-secret';
 
 import { createHmac } from 'node:crypto';
-import { describe, expect, test } from 'bun:test';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterAll, describe, expect, test } from 'bun:test';
 const { MAX_AUTO_REPLY_COOLDOWN_SEC, normalizeUrl, parseConfig } = await import('../src/lib/config.ts');
 
 const requiredEnv: NodeJS.ProcessEnv = {
@@ -19,6 +22,72 @@ const requiredEnv: NodeJS.ProcessEnv = {
   SMTP_USER: 'catch-all@example.com',
   SMTP_PASS: 'smtp-secret',
 };
+
+describe('Docker secret file variants', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'oae-config-secrets-'));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  let fileCounter = 0;
+  const secretFile = (contents: string): string => {
+    const path = join(dir, `secret-${fileCounter++}`);
+    writeFileSync(path, contents, { mode: 0o600 });
+    return path;
+  };
+
+  test('reads every _FILE variant and strips a trailing line break', () => {
+    const taskSigningSecret = 't'.repeat(32);
+    const config = parseConfig({
+      ...requiredEnv,
+      API_KEYS: undefined,
+      IMAP_PASS: undefined,
+      SMTP_PASS: undefined,
+      API_KEYS_FILE: secretFile('admin-from-file\n'),
+      IMAP_PASS_FILE: secretFile('imap-from-file\r\n'),
+      SMTP_PASS_FILE: secretFile('smtp-from-file'),
+      TASK_SIGNING_SECRET_FILE: secretFile(`${taskSigningSecret}\n`),
+    });
+    expect([...config.apiKeys]).toEqual(['admin-from-file']);
+    expect(config.imap.pass).toBe('imap-from-file');
+    expect(config.smtp.pass).toBe('smtp-from-file');
+    expect(config.taskSigningSecret).toBe(taskSigningSecret);
+    expect(config.taskSigningSecretExplicit).toBe(taskSigningSecret);
+  });
+
+  test('treats a blank direct value as unset when a file is configured', () => {
+    const config = parseConfig({
+      ...requiredEnv,
+      API_KEYS: '',
+      API_KEYS_FILE: secretFile('admin-from-file\n'),
+    });
+    expect([...config.apiKeys]).toEqual(['admin-from-file']);
+  });
+
+  test('refuses to choose between a direct value and a file', () => {
+    for (const [name, fileVar] of [
+      ['API_KEYS', 'API_KEYS_FILE'],
+      ['TASK_SIGNING_SECRET', 'TASK_SIGNING_SECRET_FILE'],
+      ['IMAP_PASS', 'IMAP_PASS_FILE'],
+      ['SMTP_PASS', 'SMTP_PASS_FILE'],
+    ]) {
+      expect(() =>
+        parseConfig({
+          ...requiredEnv,
+          [name]: 'direct-value',
+          [fileVar]: secretFile('file-value\n'),
+        }),
+      ).toThrow(`${name} and ${fileVar} must not both be set`);
+    }
+  });
+
+  test('reports an unreadable file by variable name only', () => {
+    expect(() =>
+      parseConfig({
+        ...requiredEnv,
+        API_KEYS: undefined,
+        API_KEYS_FILE: join(dir, 'missing-secret'),
+      }),
+    ).toThrow('cannot read API_KEYS_FILE');
+  });
+});
 
 describe('TLS certificate verification configuration', () => {
   test('keeps certificate verification off by default for the bundled mailserver', () => {

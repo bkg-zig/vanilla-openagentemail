@@ -5,6 +5,7 @@
  */
 
 import { createHmac } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { JSON_BODY_LIMIT_BYTES } from './limits.ts';
@@ -20,6 +21,43 @@ export { normalizeUrl };
 function emptyAsUndefined(value: unknown): unknown {
   if (typeof value !== 'string') return value;
   return value.trim() === '' ? undefined : value;
+}
+
+/**
+ * Secrets that Docker may provide as a file instead of an environment
+ * variable. Both forms are mutually exclusive; the file's final line break is
+ * removed so a mounted secret can be used verbatim.
+ */
+const SECRET_FILE_VARS = [
+  ['API_KEYS', 'API_KEYS_FILE'],
+  ['TASK_SIGNING_SECRET', 'TASK_SIGNING_SECRET_FILE'],
+  ['IMAP_PASS', 'IMAP_PASS_FILE'],
+  ['SMTP_PASS', 'SMTP_PASS_FILE'],
+] as const;
+
+/** Resolve `*_FILE` Docker secrets into their plain environment variables. */
+function resolveSecretFiles(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const resolved = { ...env };
+  for (const [name, fileVar] of SECRET_FILE_VARS) {
+    const direct = emptyAsUndefined(resolved[name]);
+    const file = emptyAsUndefined(resolved[fileVar]);
+    if (direct !== undefined && file !== undefined) {
+      throw new Error(`${name} and ${fileVar} must not both be set`);
+    }
+    if (typeof file !== 'string') {
+      delete resolved[fileVar];
+      continue;
+    }
+    let value: string;
+    try {
+      value = readFileSync(file, 'utf8').replace(/\r?\n$/, '');
+    } catch {
+      throw new Error(`cannot read ${fileVar}`);
+    }
+    resolved[name] = value;
+    delete resolved[fileVar];
+  }
+  return resolved;
 }
 
 /** RFC 5321 mailbox maximum; matches the API send-route address boundary. */
@@ -379,7 +417,7 @@ export function parseAutoReplyCooldownSec(value: unknown): number {
 
 /** Parse an environment object so TLS defaults and validation stay testable. */
 export function parseConfig(env: NodeJS.ProcessEnv) {
-  const raw = envSchema.parse(env);
+  const raw = envSchema.parse(resolveSecretFiles(env));
   const primaryDomain = raw.DOMAIN.toLowerCase();
   if (primaryDomain.endsWith('..')) {
     throw new Error(`DOMAIN contains invalid domain: "${raw.DOMAIN}"`);
