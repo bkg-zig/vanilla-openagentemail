@@ -157,6 +157,18 @@
     return JSON.parse(raw);
   }
 
+  /* Webmail send. body is the JSON text of { from, to, subject, text, inReplyTo?, references? }.
+     The server runs the same send handler as the public API. */
+  async function sendMessage(body, idempotencyKey) {
+    var headers = { 'content-type': 'application/json' };
+    if (idempotencyKey) headers['idempotency-key'] = idempotencyKey;
+    return apiJson('/ui/api/send', {
+      method: 'POST',
+      headers: headers,
+      body: body
+    });
+  }
+
   async function handleCreateSubmit() {
     if (!isAdmin()) return;
     if (createModalSubmit.disabled || (typeof createDomain !== 'undefined' && createDomain && createDomain.disabled)) return;

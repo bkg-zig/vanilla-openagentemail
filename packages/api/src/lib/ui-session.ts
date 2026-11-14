@@ -854,6 +854,21 @@ export const uiSessionBodyLimit = bodyLimit({
   onError: (c) => c.json({ error: 'request_too_large' }, 413),
 });
 
+/** Webmail send path: the only /ui/api route that carries a full mail body. */
+export const UI_SEND_PATH = '/ui/api/send';
+
+/** `text` and `html` may each be 1,000,000 characters (see sendSchema). */
+const uiSendBodyLimit = bodyLimit({
+  maxSize: 8 * 1024 * 1024,
+  onError: (c) => c.json({ error: 'request_too_large' }, 413),
+});
+
+/** Body limit for /ui/api/*: 4 KiB everywhere, except the webmail send path. */
+export const uiApiBodyLimit = createMiddleware(async (c, next) => {
+  if (c.req.path === UI_SEND_PATH) return uiSendBodyLimit(c, next);
+  return uiSessionBodyLimit(c, next);
+});
+
 /**
  * UI 非安全方法 Origin / Fetch Metadata 闸。
  *

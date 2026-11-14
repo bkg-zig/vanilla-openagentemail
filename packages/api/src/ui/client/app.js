@@ -401,6 +401,7 @@
       });
       header.append(seenToggle);
     }
+    appendComposeActions(header, detail);
 
     var otpHost = document.createElement('div');
     otpHost.className = 'detail-otp';

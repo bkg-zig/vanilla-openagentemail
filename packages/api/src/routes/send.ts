@@ -190,7 +190,13 @@ sendRoute.get('/history/:id', async (c) => {
   }
 });
 
-sendRoute.post('/', async (c) => {
+/**
+ * Send handler shared by POST /v1/send (bearer token) and POST /ui/api/send
+ * (dashboard session cookie). Both auth layers set the same `auth` context
+ * value, so identity scoping, rate limits, idempotency and the send log are
+ * identical on both paths. Do not fork this logic.
+ */
+export async function handleSend(c: Context): Promise<Response> {
   // 与 webhook 同一套 trim / 空键 / 128 上限，另外拒绝控制字符。坏键在读 body 之前就 400。
   const idempotencyKey = parseSendIdempotencyKey(c.req.header('idempotency-key'));
   if (!idempotencyKey.ok) return c.json({ error: 'invalid_request' }, 400);
@@ -433,4 +439,6 @@ sendRoute.post('/', async (c) => {
     // 还没记成已完成、也没显式放开的（意外抛出）在离开前放开，避免键永远停在占位。
     if (!idempotencySettled) releaseSendIdempotency(reservation);
   }
-});
+}
+
+sendRoute.post('/', handleSend);

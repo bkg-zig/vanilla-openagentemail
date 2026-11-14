@@ -15,6 +15,7 @@ import {
   UiSessionStore,
   createUiSessionRoutes,
   requireUiOrigin,
+  uiApiBodyLimit,
   uiSessionBodyLimit,
 } from './lib/ui-session.ts';
 import { getMcpLoopbackBase } from './lib/mcp-loopback.ts';
@@ -162,7 +163,7 @@ export function createApp(options: AppOptions = {}): Hono {
     app.route('/ui/api/session', createUiSessionRoutes(uiSessions));
     // /ui/api/* now has unsafe methods too (POST messages/:id/seen); the gate
     // passes GET/HEAD/OPTIONS through, so this only guards the writes.
-    app.use('/ui/api/*', uiSessionBodyLimit);
+    app.use('/ui/api/*', uiApiBodyLimit);
     app.use('/ui/api/*', requireUiOrigin);
     app.route('/ui/api/oauth', createUiOAuthApiRoutes(uiSessions));
     app.route(

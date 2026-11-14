@@ -35,7 +35,7 @@ describe('dist bundle is self-contained (#520-A)', () => {
       const build = Bun.spawnSync(['bun', 'run', 'build'], { cwd: pkgDir });
       if (build.exitCode !== 0) throw new Error(`bun run build failed:\n${build.stderr}`);
 
-      // dist/ui 清单：19 js + 4 css + 4 字体 = 27，且只有真资产（不带 .ts）。
+      // dist/ui 清单：21 js + 4 css + 4 字体 = 29，且只有真资产（不带 .ts）。
       const distUi = readdirSync(join(dist, 'ui')).sort();
       expect(distUi).toEqual([
         ...[...readdirSync(join(pkgDir, 'src/ui/client')).filter((f) => f.endsWith('.js'))],

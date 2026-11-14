@@ -6,7 +6,7 @@
 
   function elementInsideModal(node) {
     if (!node || !node.closest) return false;
-    return !!(node.closest('#token-modal') || node.closest('#confirm-modal') || node.closest('#create-modal') || node.closest('#device-add-modal') || node.closest('#device-pair-modal'));
+    return !!(node.closest('#token-modal') || node.closest('#confirm-modal') || node.closest('#create-modal') || node.closest('#device-add-modal') || node.closest('#device-pair-modal') || node.closest('#compose-modal'));
   }
 
   function closeAllModals(options) {
@@ -16,6 +16,8 @@
     createModal.hidden = true;
     deviceAddModal.hidden = true;
     devicePairModal.hidden = true;
+    /* Webmail dialog lives in pages/compose.js; absent until first opened. */
+    if (typeof closeComposeModal === 'function') closeComposeModal();
     devicePairPassword.textContent = '';
     devicePairQr.replaceChildren();
     devicePairServer.textContent = '';
@@ -149,7 +151,8 @@
 
   document.addEventListener('keydown', function (event) {
     if (event.key !== 'Escape') return;
-    if (tokenModal.hidden && confirmModal.hidden && createModal.hidden && deviceAddModal.hidden && devicePairModal.hidden) return;
+    var composeOpen = typeof isComposeOpen === 'function' && isComposeOpen();
+    if (tokenModal.hidden && confirmModal.hidden && createModal.hidden && deviceAddModal.hidden && devicePairModal.hidden && !composeOpen) return;
     event.preventDefault();
     closeAllModals();
   });

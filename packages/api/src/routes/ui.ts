@@ -17,6 +17,7 @@ import {
   type PushContentTier,
 } from '../lib/identities.ts';
 import { recordAuditEvent } from '../lib/audit.ts';
+import { handleSend } from './send.ts';
 import { clientIp } from '../lib/net.ts';
 import {
   NotifyError,
@@ -897,6 +898,10 @@ export function createUiApiRoutes(
     }
   });
 
+  // Webmail send: same handler as POST /v1/send. The session's `auth` scopes
+  // `from` exactly like a bearer token would (identity: own address only).
+  routes.post('/send', handleSend);
+
   routes.get('/messages', async (c) => {
     const parsed = listQuerySchema.safeParse(c.req.query());
     if (!parsed.success) return c.json({ error: 'invalid_request' }, 400);
@@ -967,6 +972,9 @@ export function createUiApiRoutes(
       autoSubmitted: detail.autoSubmitted,
       taskId: detail.taskId,
       taskState: detail.taskState,
+      // Threading ids for the webmail reply form; omitted when the mail has none.
+      ...(detail.messageId ? { messageId: detail.messageId } : {}),
+      ...(detail.references ? { references: detail.references } : {}),
       hasHtml: Boolean(detail.html),
       htmlTooLarge:
         typeof detail.html === 'string' &&

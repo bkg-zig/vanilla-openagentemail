@@ -20,6 +20,7 @@ import { MODAL_JS } from './client/components/modal.ts';
 import { PAGINATOR_JS } from './client/components/paginator.ts';
 import { SENSITIVE_CONTENT_JS } from './client/components/sensitive-content.ts';
 import { INBOX_PAGE_JS } from './client/pages/inbox.ts';
+import { COMPOSE_PAGE_JS } from './client/pages/compose.ts';
 import { OVERVIEW_PAGE_JS } from './client/pages/overview.ts';
 import { NOTIFICATIONS_PAGE_JS } from './client/pages/notifications.ts';
 import { TASKS_PAGE_JS } from './client/pages/tasks.ts';
@@ -78,6 +79,7 @@ export const UI_JS =
   PAGINATOR_JS +
   SENSITIVE_CONTENT_JS +
   INBOX_PAGE_JS +
+  COMPOSE_PAGE_JS +
   OVERVIEW_PAGE_JS +
   NOTIFICATIONS_PAGE_JS +
   TASKS_PAGE_JS +

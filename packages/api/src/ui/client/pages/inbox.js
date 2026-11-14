@@ -4,8 +4,27 @@
     { id: 'all', label: t('inbox.label.allMail') }
   ];
 
+  /* Created once and kept outside the re-rendered list, so keyboard focus
+     can return to it after the compose dialog closes. */
+  var composeButton = null;
+
+  function ensureComposeButton() {
+    if (composeButton || !folderList || !folderList.parentNode) return;
+    composeButton = document.createElement('button');
+    composeButton.type = 'button';
+    composeButton.id = 'compose-button';
+    composeButton.className = 'primary';
+    composeButton.classList.add('compose-button');
+    composeButton.textContent = t('compose.action.newMail');
+    composeButton.addEventListener('click', function () {
+      openCompose('new');
+    });
+    folderList.parentNode.insertBefore(composeButton, folderList);
+  }
+
   function renderFolderNav() {
     if (!folderList) return;
+    ensureComposeButton();
     folderList.replaceChildren();
     MAIL_FOLDER_ITEMS.forEach(function (item) {
       var li = document.createElement('li');

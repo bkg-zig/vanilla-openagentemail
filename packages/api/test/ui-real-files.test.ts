@@ -13,7 +13,7 @@ const { UI_CSS, UI_JS } = await import('../src/ui/assets.ts');
 /**
  * 真文件产物清单（#520-A 提取 PR）：assets.ts 拼接所用的全部真 .js/.css 文件。
  * 钉死两件事：
- *   1. 磁盘上正好这 24 个真文件、非空（防真文件漏层——CI/Docker 上下文缺文件即红）；
+ *   1. 磁盘上正好这 25 个真文件、非空（防真文件漏层——CI/Docker 上下文缺文件即红）；
  *   2. 按本清单 + IIFE 包装重组 === UI_JS / UI_CSS 导出（顺序与内容都被钉死，
  *      loader 读盘而非藏字符串副本）。
  */
@@ -30,6 +30,7 @@ const JS_FILES = [
   'client/components/paginator.js',
   'client/components/sensitive-content.js',
   'client/pages/inbox.js',
+  'client/pages/compose.js',
   'client/pages/overview.js',
   'client/pages/notifications.js',
   'client/pages/tasks.js',
@@ -60,7 +61,7 @@ function realFilesUnder(dir: string, ext: string): string[] {
 }
 
 describe('UI real-file manifest (#520-A)', () => {
-  test('disk holds exactly the 20 real .js files and 4 real .css files, all non-empty', () => {
+  test('disk holds exactly the 21 real .js files and 4 real .css files, all non-empty', () => {
     expect(realFilesUnder('client', '.js')).toEqual([
       'api.js',
       'app.js',
@@ -78,6 +79,7 @@ describe('UI real-file manifest (#520-A)', () => {
     ]);
     expect(realFilesUnder('client/pages', '.js')).toEqual([
       'authorized-clients.js',
+      'compose.js',
       'connect.js',
       'identities.js',
       'inbox.js',
@@ -130,11 +132,12 @@ describe('UI real-file manifest (#520-A)', () => {
     // #137 B2 fix：dateFrom/dateTo 键拆分后 I18N_EN→I18N_JS 体积变化。
     // #137 B2 R1：oauth.error.* 三键入 I18N_EN。
     // #137 B2 R2：Intl formatters 跟随 document.documentElement.lang。
+    // Webmail: compose dialog (pages/compose.js), New mail / Reply / Forward buttons, compose.* keys and styles.
     expect(sha256(UI_JS)).toBe(
-      '86824aed2d667a059820225d5a088ea83b05ac8a2f60d7611d287ccf117f842f',
+      '819eaa0dc7a2aba17838ee0be1b23322eaeca03da7f394c831bb5cb7a185ce83',
     );
     expect(sha256(UI_CSS)).toBe(
-      '17972c8d27e939a4472b159f36e7b0277b64ce61bcb94efe94adf0b0ed39710b',
+      '249e265e0ff90a5b60df233691750ecf05e0c5d435fdd58674b35f8447a20ff9',
     );
   });
 });
