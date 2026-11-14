@@ -134,7 +134,7 @@ describe('UI real-file manifest (#520-A)', () => {
     // #137 B2 R2：Intl formatters 跟随 document.documentElement.lang。
     // Webmail: compose dialog (pages/compose.js), New mail / Reply / Forward buttons, compose.* keys and styles.
     expect(sha256(UI_JS)).toBe(
-      '819eaa0dc7a2aba17838ee0be1b23322eaeca03da7f394c831bb5cb7a185ce83',
+      'a3d0c6b0ef9da73953b09ea77bb5f0645af18ffed8f22231c6df2a26dd8582e8',
     );
     expect(sha256(UI_CSS)).toBe(
       '249e265e0ff90a5b60df233691750ecf05e0c5d435fdd58674b35f8447a20ff9',

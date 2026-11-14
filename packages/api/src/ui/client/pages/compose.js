@@ -194,6 +194,31 @@
     return text.split(',')[0].trim();
   }
 
+  /* Every address in a header text such as: Ada <a@x.example>, b@y.example. */
+  function composeAddressList(value) {
+    return String(value || '').match(/[^\s<>,;"()]+@[^\s<>,;"()]+/g) || [];
+  }
+
+  /* Reply all: the sender first, then everyone in To and Cc, without the own
+     address and without duplicates. The send API has no Cc field, so all of
+     them go into To. */
+  function composeReplyAllRecipients(detail, ownAddress) {
+    var own = String(ownAddress || '').toLowerCase();
+    var seen = {};
+    var list = [];
+    [composeExtractAddress(detail.from)]
+      .concat(composeAddressList(detail.to), composeAddressList(detail.cc))
+      .forEach(function (address) {
+        var key = address.toLowerCase();
+        if (!key || key === own || seen[key]) return;
+        seen[key] = true;
+        list.push(address);
+      });
+    /* A mail the user sent to themselves still needs one recipient. */
+    if (list.length === 0) list.push(composeExtractAddress(detail.from));
+    return list.join(', ');
+  }
+
   function composePrefixSubject(prefix, subject) {
     var text = String(subject || '').trim();
     if (text.toLowerCase().indexOf(prefix.toLowerCase()) === 0) return text;
@@ -224,7 +249,7 @@
     return '\n\n' + lines.join('\n') + '\n';
   }
 
-  /* mode is new, reply or forward. detail is the open message for the last two. */
+  /* mode is new, reply, replyAll or forward. detail is the open message for the last three. */
   function openCompose(mode, detail) {
     buildComposeModal();
     beginModal();
@@ -240,9 +265,11 @@
     var to = '';
     var subject = '';
     var text = '';
-    if (mode === 'reply' && detail) {
-      titleKey = 'compose.title.reply';
-      to = composeExtractAddress(detail.from);
+    if ((mode === 'reply' || mode === 'replyAll') && detail) {
+      titleKey = mode === 'replyAll' ? 'compose.title.replyAll' : 'compose.title.reply';
+      to = mode === 'replyAll'
+        ? composeReplyAllRecipients(detail, state.activeAddress)
+        : composeExtractAddress(detail.from);
       subject = composePrefixSubject('Re: ', detail.subject);
       text = composeQuote(detail);
       if (detail.messageId) {
@@ -386,7 +413,7 @@
     announce(tFormat('compose.announce.sent', { to: recipients.list.join(', ') }));
   }
 
-  /* Reply and Forward buttons for the message detail header. */
+  /* Reply, Reply all and Forward buttons for the message detail header. */
   function appendComposeActions(header, detail) {
     var actions = document.createElement('div');
     actions.className = 'detail-actions';
@@ -397,6 +424,13 @@
     reply.addEventListener('click', function () {
       openCompose('reply', detail);
     });
+    var replyAll = document.createElement('button');
+    replyAll.type = 'button';
+    replyAll.className = 'quiet';
+    replyAll.textContent = t('compose.action.replyAll');
+    replyAll.addEventListener('click', function () {
+      openCompose('replyAll', detail);
+    });
     var forward = document.createElement('button');
     forward.type = 'button';
     forward.className = 'quiet';
@@ -404,7 +438,7 @@
     forward.addEventListener('click', function () {
       openCompose('forward', detail);
     });
-    actions.append(reply, forward);
+    actions.append(reply, replyAll, forward);
     header.append(actions);
   }
 

@@ -972,6 +972,8 @@ export function createUiApiRoutes(
       autoSubmitted: detail.autoSubmitted,
       taskId: detail.taskId,
       taskState: detail.taskState,
+      // Cc for the webmail "reply all" form; omitted when the mail has none.
+      ...(detail.cc ? { cc: detail.cc } : {}),
       // Threading ids for the webmail reply form; omitted when the mail has none.
       ...(detail.messageId ? { messageId: detail.messageId } : {}),
       ...(detail.references ? { references: detail.references } : {}),

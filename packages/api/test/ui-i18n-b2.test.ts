@@ -41,7 +41,7 @@ const LOCALES = [
 describe('console i18n B2 (#137)', () => {
   test('① 键集全等 ×4：每 locale ≡ I18N_EN', () => {
     const enKeys = Object.keys(I18N_EN).sort();
-    expect(enKeys.length).toBe(538);
+    expect(enKeys.length).toBe(540);
     for (const { code, dict } of LOCALES) {
       const keys = Object.keys(dict).sort();
       expect(keys, `${code} key parity`).toEqual(enKeys);
@@ -140,7 +140,7 @@ describe('console i18n B2 (#137)', () => {
 
   test('getUiI18nDict：en undefined；四语非空', () => {
     expect(getUiI18nDict('en')).toBeUndefined();
-    expect(Object.keys(getUiI18nDict('ja')!).length).toBe(538);
+    expect(Object.keys(getUiI18nDict('ja')!).length).toBe(540);
   });
 
   test('P1 自审修复：Alerts 日期筛标签 ≠ 邮件 From/To', () => {

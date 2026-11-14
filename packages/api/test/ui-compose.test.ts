@@ -282,8 +282,9 @@ describe('UI message detail carries reply threading ids', () => {
     return { app, cookie: `oae_ui=${created.sid}` };
   }
 
-  test('messageId and references are projected when the mail has them', async () => {
+  test('cc, messageId and references are projected when the mail has them', async () => {
     const { app, cookie } = detailApp({
+      cc: 'Carl <carl@example.net>',
       messageId: '<orig@example.net>',
       references: ['<root@example.net>'],
     });
@@ -292,6 +293,7 @@ describe('UI message detail carries reply threading ids', () => {
     });
     expect(response.status).toBe(200);
     const body = (await response.json()) as Record<string, unknown>;
+    expect(body.cc).toBe('Carl <carl@example.net>');
     expect(body.messageId).toBe('<orig@example.net>');
     expect(body.references).toEqual(['<root@example.net>']);
   });
@@ -302,6 +304,7 @@ describe('UI message detail carries reply threading ids', () => {
       headers: { cookie },
     });
     const body = (await response.json()) as Record<string, unknown>;
+    expect('cc' in body).toBe(false);
     expect('messageId' in body).toBe(false);
     expect('references' in body).toBe(false);
   });
@@ -455,6 +458,7 @@ type Detail = {
   id: string;
   from: string;
   to: string;
+  cc?: string;
   subject: string;
   date: string;
   text: string;
@@ -752,19 +756,43 @@ describe('compose dialog: reply and forward', () => {
     expect('inReplyTo' in body).toBe(false);
   });
 
+  test('reply all addresses the sender plus To and Cc, without the own address or duplicates', async () => {
+    const h = harness();
+    h.open('replyAll', {
+      ...DETAIL,
+      to: `"Doe, John" <john@example.net>, ${OWN.toUpperCase()}, ada@example.net`,
+      cc: 'Carl <carl@example.net>, john@example.net',
+    });
+    expect(h.el('compose-title').textContent).toBe('Reply to all');
+    expect(h.el('compose-to').value).toBe('ada@example.net, john@example.net, carl@example.net');
+    expect(h.el('compose-subject').value).toBe('Re: Question');
+    expect(h.doc.activeElement).toBe(h.el('compose-to'));
+    await h.el('compose-send').click();
+    const body = h.calls.sends[0]!.body;
+    expect(body.to).toEqual(['ada@example.net', 'john@example.net', 'carl@example.net']);
+    expect(body.inReplyTo).toBe('<orig@example.net>');
+    expect(body.references).toEqual(['<root@example.net>', '<orig@example.net>']);
+  });
+
+  test('reply all on a mail with no other recipients equals a plain reply', () => {
+    const h = harness();
+    h.open('replyAll', DETAIL);
+    expect(h.el('compose-to').value).toBe('ada@example.net');
+  });
+
   test('the detail header gets Reply and Forward buttons with text', async () => {
     const h = harness();
     const header = h.doc.createElement('header');
     h.inboxView.append(header);
     h.api.appendComposeActions(header, DETAIL);
     const buttons = header.walk().filter((node) => node.tagName === 'button');
-    expect(buttons.map((button) => button.textContent)).toEqual(['Reply', 'Forward']);
+    expect(buttons.map((button) => button.textContent)).toEqual(['Reply', 'Reply all', 'Forward']);
     for (const button of buttons) expect(button.type).toBe('button');
-    buttons[1]!.focus();
-    await buttons[1]!.click();
+    buttons[2]!.focus();
+    await buttons[2]!.click();
     expect(h.el('compose-subject').value).toBe('Fwd: Question');
     h.doc.fire('keydown', fakeEvent({ key: 'Escape' }));
-    expect(h.doc.activeElement).toBe(buttons[1]!);
+    expect(h.doc.activeElement).toBe(buttons[2]!);
   });
 });
 

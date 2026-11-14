@@ -72,6 +72,8 @@ export interface MessageDetail {
   id: string;
   from: string;
   to: string;
+  /** Cc header as display text; omitted when the mail has none. */
+  cc?: string;
   subject: string;
   date: string;
   text: string;
@@ -832,6 +834,9 @@ export function toDetail(uid: number, parsed: Awaited<ReturnType<typeof parseSou
   const toText = Array.isArray(parsed.to)
     ? parsed.to.map((a) => a.text).join(', ')
     : (parsed.to?.text ?? '');
+  const ccText = Array.isArray(parsed.cc)
+    ? parsed.cc.map((a) => a.text).join(', ')
+    : (parsed.cc?.text ?? '');
   // OTP / links 在围栏之前提取（围栏只在 MCP 序列化层），此处不受影响。
   const otp = extractOtp(text, extractableHtml);
   const taskId = parsed.headers.get('x-oa-task');
@@ -840,6 +845,7 @@ export function toDetail(uid: number, parsed: Awaited<ReturnType<typeof parseSou
     id: String(uid),
     from: parsed.from?.text ?? '',
     to: toText,
+    ...(ccText ? { cc: ccText } : {}),
     subject: parsed.subject ?? '',
     date: (parsed.date ?? new Date(0)).toISOString(),
     text,
